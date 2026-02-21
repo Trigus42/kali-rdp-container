@@ -39,12 +39,13 @@ RUN apt-get update \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         sliver \
-        fuff \
+        ffuf \
         burpsuite \
         bloodhound \
         crackmapexec \
         evil-winrm \
-        hashcat
+        hashcat \
+        seclists
 
 # User setup
 RUN useradd -m -s /bin/zsh -G sudo kali \
