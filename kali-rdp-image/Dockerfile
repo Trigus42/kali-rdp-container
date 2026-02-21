@@ -72,6 +72,11 @@ RUN mkdir -p /run/sshd
 COPY startup /startup
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Disable screen locking and power management
+RUN rm -f /etc/xdg/autostart/xfce4-screensaver.desktop \
+    && rm -f /etc/xdg/autostart/light-locker.desktop \
+    && rm -f /etc/xdg/autostart/xfce4-power-manager.desktop
+
 EXPOSE 22/tcp
 EXPOSE 3389/tcp
 
