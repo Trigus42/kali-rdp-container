@@ -9,9 +9,10 @@ RUN apt-get update \
         kali-defaults \
         kali-linux-headless
 
+# Desktop environment and remote access setup
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ## Essentials for getting XRDP and SSH going
+        ## Essentials for XRDP and SSH
         ## https://github.com/heywoodlh/dockerfiles/blob/master/rdp-kali-linux/Dockerfile
         dbus-x11 \
         locales \
@@ -30,12 +31,24 @@ RUN apt-get update \
         kali-desktop-xfce \
         kali-themes \
         kali-wallpapers-2025 \
-        # Additional useful tools
-        rlwrap \
-        iputils-ping \
-        nano \
     && apt-get clean
 
+# Docker setup
+ARG DEBIAN_CODENAME=trixie
+RUN apt-get update && apt-get install -y ca-certificates curl && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "Types: deb\n\
+URIs: https://download.docker.com/linux/debian\n\
+Suites: ${DEBIAN_CODENAME}\n\
+Components: stable\n\
+Signed-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.sources && \
+    apt-get update && \
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin fuse-overlayfs && \
+    apt-get clean
+
+# Additional tools
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         sliver \
@@ -45,7 +58,13 @@ RUN apt-get update \
         crackmapexec \
         evil-winrm \
         hashcat \
-        seclists
+        seclists \
+    && apt-get clean
+
+# uv tools
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN uv tool install --no-cache \
+    git+https://github.com/Trigus42/jwt_tool.git
 
 # User setup
 RUN useradd -m -s /bin/zsh -G sudo kali \
@@ -54,14 +73,6 @@ RUN useradd -m -s /bin/zsh -G sudo kali \
     && cp /etc/skel/. /home/kali/ -a \
     && chown -R kali:kali /home/kali/
 RUN cp /etc/skel/. /root/ -a
-
-# Docker CLI setup
-COPY --from=docker:dind /usr/local/bin/docker* /usr/local/bin/
-
-# uv tools
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-RUN uv tool install --no-cache \
-    git+https://github.com/Trigus42/jwt_tool.git
 
 # SSH setup
 RUN sed -i 's/#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/g' /etc/ssh/sshd_config
