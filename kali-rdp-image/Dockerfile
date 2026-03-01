@@ -22,6 +22,7 @@ RUN apt-get update \
         xfce4-goodies \
         fonts-dejavu \
         xorgxrdp \
+        tigervnc-standalone-server \
         xrdp \
         iproute2 \
         dnsutils \
@@ -87,6 +88,9 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN rm -f /etc/xdg/autostart/xfce4-screensaver.desktop \
     && rm -f /etc/xdg/autostart/light-locker.desktop \
     && rm -f /etc/xdg/autostart/xfce4-power-manager.desktop
+
+# Force Xvnc to be the default XRDP session to fix Kali scrolling bug
+RUN sed -i '/^\[Xorg\]/i [Xvnc-Default]\nname=Xvnc-Default\nlib=libvnc.so\nusername=ask\npassword=ask\nip=127.0.0.1\nport=-1\n' /etc/xrdp/xrdp.ini
 
 EXPOSE 22/tcp
 EXPOSE 3389/tcp
