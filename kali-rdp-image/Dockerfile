@@ -50,6 +50,15 @@ Signed-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.source
     apt-get clean
 
 # Additional tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        git-lfs \
+        starship \
+        zsh-autosuggestions \
+        zsh-syntax-highlighting \
+    && apt-get clean
+
+# Pentesting tools
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         sliver \
@@ -71,9 +80,16 @@ RUN uv tool install --no-cache \
 RUN useradd -m -s /bin/zsh -G sudo kali \
     && echo 'kali:kali' | chpasswd \
     && echo 'kali ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers \
-    && cp /etc/skel/. /home/kali/ -a \
     && chown -R kali:kali /home/kali/
-RUN cp /etc/skel/. /root/ -a
+
+# Shell setup
+# Default from /etc/skell often borks the terminal so we use our own
+COPY .zshrc /home/kali/.zshrc
+COPY .zshrc /root/.zshrc
+RUN \
+    chsh -s /bin/zsh kali && \
+    chsh -s /bin/zsh root && \
+    chown -R kali:kali /home/kali/.zshrc
 
 # SSH setup
 RUN sed -i 's/#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/g' /etc/ssh/sshd_config
