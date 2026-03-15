@@ -45,6 +45,10 @@ spec:
         volumeMounts:
         - name: host-workspace
           mountPath: /workspace/host-volume/
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
 
       volumes:
       - name: host-workspace
