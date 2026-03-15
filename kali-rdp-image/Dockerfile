@@ -114,6 +114,11 @@ RUN rm -f /etc/xdg/autostart/xfce4-screensaver.desktop \
 # Force Xvnc to be the default XRDP session to fix Kali scrolling bug
 RUN sed -i '/^\[Xorg\]/i [Xvnc-Default]\nname=Xvnc-Default\nlib=libvnc.so\nusername=ask\npassword=ask\nip=127.0.0.1\nport=-1\n' /etc/xrdp/xrdp.ini
 
+# WORKAROUND: Allow bwrap to use SUID to fix XFCE/XRDP session crashes.
+# WHY: Containers block the unprivileged user namespaces that bwrap needs 
+# to sandbox SVG icon rendering. SUID allows it to bypass this restriction.
+RUN chmod u+s /usr/bin/bwrap
+
 EXPOSE 22/tcp
 EXPOSE 3389/tcp
 
