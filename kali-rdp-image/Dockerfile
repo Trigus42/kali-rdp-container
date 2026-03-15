@@ -49,6 +49,13 @@ Signed-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.source
     apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin fuse-overlayfs && \
     apt-get clean
 
+# gocryptfs for encrypted host volume
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gocryptfs \
+        fuse3 \
+    && apt-get clean
+
 # Additional tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
@@ -68,7 +75,6 @@ RUN apt-get update \
         crackmapexec \
         evil-winrm \
         hashcat \
-        seclists \
     && apt-get clean
 
 # uv tools
