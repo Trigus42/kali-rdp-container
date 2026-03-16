@@ -7,7 +7,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         kali-defaults \
-        kali-linux-headless
+        kali-linux-headless \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Desktop environment and remote access setup
 RUN apt-get update \
@@ -32,7 +34,8 @@ RUN apt-get update \
         kali-desktop-xfce \
         kali-themes \
         kali-wallpapers-2025 \
-    && apt-get clean
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Docker setup
 ARG DEBIAN_CODENAME=trixie
@@ -47,14 +50,16 @@ Components: stable\n\
 Signed-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.sources && \
     apt-get update && \
     apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin fuse-overlayfs && \
-    apt-get clean
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # gocryptfs for encrypted host volume
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         gocryptfs \
         fuse3 \
-    && apt-get clean
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Additional tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -63,7 +68,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         starship \
         zsh-autosuggestions \
         zsh-syntax-highlighting \
-    && apt-get clean
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Pentesting tools
 RUN apt-get update \
@@ -75,10 +81,11 @@ RUN apt-get update \
         crackmapexec \
         evil-winrm \
         hashcat \
-    && apt-get clean
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # uv tools
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.10.10 /uv /uvx /bin/
 RUN uv tool install --no-cache \
     git+https://github.com/Trigus42/jwt_tool.git
 
@@ -98,9 +105,9 @@ RUN \
     chown -R kali:kali /home/kali/.zshrc
 
 # SSH setup
-RUN sed -i 's/#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/g' /etc/ssh/sshd_config
-RUN echo 'AuthorizedKeysFile ~/.ssh/authorized_keys' >> /etc/ssh/sshd_config
-RUN mkdir -p /run/sshd
+RUN sed -i 's/#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/g' /etc/ssh/sshd_config \
+    && echo 'AuthorizedKeysFile ~/.ssh/authorized_keys' >> /etc/ssh/sshd_config \
+    && mkdir -p /run/sshd
 
 # Services
 COPY startup /startup
