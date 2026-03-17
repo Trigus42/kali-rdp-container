@@ -3,6 +3,11 @@ PROMPT='%F{red}┌──(%n@%m)-[%~]%f
 %F{red}└─$%f '
 
 
+# Ensures Zsh correctly calculates the width of multi-byte Unicode characters in the prompt.
+# This prevents visual redrawing glitches (like phantom duplicate text) without altering system language.
+export LC_CTYPE="C.UTF-8"
+
+
 # Multi-Terminal History Configuration
 HISTFILE=~/.zsh_history
 HISTSIZE=100000
@@ -23,6 +28,16 @@ setopt numericglobsort     # sort filenames numerically when it makes sense
 
 WORDCHARS='_-'             # Don't consider certain characters part of the word
 PROMPT_EOL_MARK=""         # hide EOL sign ('%')
+
+bindkey -e                                        # emacs key bindings
+bindkey ' ' magic-space                           # do history expansion on space
+bindkey '^U' backward-kill-line                   # ctrl + U
+bindkey '^[[3;5~' kill-word                       # ctrl + Supr
+bindkey '^[[3~' delete-char                       # delete
+bindkey '^[[1;5C' forward-word                    # ctrl + ->
+bindkey '^[[1;5D' backward-word                   # ctrl + <-
+bindkey '^[[H' beginning-of-line                  # home
+bindkey '^[[F' end-of-line                        # end
 
 
 # Smart Tab Completion
