@@ -31,6 +31,8 @@ spec:
           value: "true"
         - name: DIND_ENABLE
           value: "true"
+        - name: HISTFILE
+          value: "/workspace/host-volume/.zsh_history"
         ports:
         - containerPort: 3389
           name: rdp

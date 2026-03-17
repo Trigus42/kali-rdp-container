@@ -8,7 +8,13 @@ export LC_CTYPE="C.UTF-8"
 # ==============================================================================
 # 2. HISTORY CONFIGURATION (Custom Multi-Terminal)
 # ==============================================================================
-HISTFILE=~/.zsh_history
+# Source container env vars (e.g. HISTFILE) written by startup/env.sh.
+# Done here so it runs after the system /etc/zsh/zshrc which may reset values.
+[ -f /etc/kali-rdp-env ] && source /etc/kali-rdp-env
+
+if [ -z "$HISTFILE" ]; then
+    HISTFILE=~/.zsh_history
+fi
 HISTSIZE=100000
 SAVEHIST=100000
 setopt INC_APPEND_HISTORY
