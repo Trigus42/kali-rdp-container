@@ -68,6 +68,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         starship \
         zsh-autosuggestions \
         zsh-syntax-highlighting \
+        nano \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
