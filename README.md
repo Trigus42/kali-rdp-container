@@ -6,6 +6,35 @@ It's not optimized for size, but for ease of use. It is based on the official Ka
 
 There might be breaking changes at any time, so use it at your own risk.
 
+## gocryptfs (Encrypted Volume)
+
+gocryptfs provides a transparent encryption layer on top of the host-mounted directory. Files written to the decrypted mount are automatically encrypted on the host.
+
+### How it works
+
+| Path (inside container)              | Purpose                                         |
+|--------------------------------------|-------------------------------------------------|
+| `/workspace/host-unencrypted/`       | Raw host mount                                  |
+| `.../kali-encrypted-mount/`          | Encrypted ciphertext dir (lives on the host)    |
+| `/workspace/host-encrypted/`         | Decrypted plaintext mount                       |
+
+### Setup
+
+1. Set the `GOCRYPTFS_PASSWORD` environment variable. If unset, gocryptfs is skipped entirely.
+
+2. On first start the ciphertext directory is auto-initialized (`gocryptfs -init`). On subsequent starts it is simply mounted.
+
+3. Read/write files under `/workspace/host-encrypted/` — they appear encrypted under `kali-encrypted-mount/` on the host.
+
+### Environment variables
+
+| Variable                | Default                            | Description                          |
+|-------------------------|------------------------------------|--------------------------------------|
+| `GOCRYPTFS_PASSWORD`    | *(none — required)*                | Passphrase for the encrypted volume  |
+| `RAW_MOUNT`             | `/workspace/host-unencrypted`      | Host-mounted directory               |
+| `ENCRYPTED_FOLDER_NAME` | `kali-encrypted-mount`             | Subfolder that holds ciphertext      |
+| `ENCRYPTED_MOUNT`       | `/workspace/host-encrypted`        | Where the decrypted view is mounted  |
+
 ## Syncthing (Cross-Deployment Sync)
 
 Syncthing keeps a `/workspace/syncthing/` directory in sync across all deployments (local docker-compose and k8s pods).
@@ -21,3 +50,4 @@ Syncthing keeps a `/workspace/syncthing/` directory in sync across all deploymen
 4. When adding a remote device, enable **Auto Accept** so shared folders are accepted automatically.
 
 No ports are exposed to the host. The Web UI is only accessible from inside the container. Syncthing uses global relay and discovery servers by default, so sync works out of the box as long as the container has outbound internet access.
+
