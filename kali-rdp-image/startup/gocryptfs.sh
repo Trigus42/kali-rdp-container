@@ -29,6 +29,11 @@ if [[ ! -f "${CIPHER_DIR}/gocryptfs.conf" ]]; then
     echo "${GOCRYPTFS_PASSWORD}" | gocryptfs -init -q -nosyslog "${CIPHER_DIR}"
 fi
 
+# Get kali user's UID and GID
+KALI_UID=$(id -u kali)
+KALI_GID=$(id -g kali)
+
 # Mount the encrypted filesystem in foreground (logs to stdout/stderr)
+# -force_owner is needed because the underlying virtiofs does not support chown
 echo "Mounting encrypted filesystem at ${MOUNT_DIR}"
-echo "${GOCRYPTFS_PASSWORD}" | gocryptfs -fg -nosyslog "${CIPHER_DIR}" "${MOUNT_DIR}"
+echo "${GOCRYPTFS_PASSWORD}" | gocryptfs -fg -nosyslog -force_owner "${KALI_UID}:${KALI_GID}" "${CIPHER_DIR}" "${MOUNT_DIR}"

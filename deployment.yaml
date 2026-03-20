@@ -32,7 +32,13 @@ spec:
         - name: DIND_ENABLE
           value: "true"
         - name: HISTFILE
-          value: "/workspace/host-volume/.zsh_history"
+          value: "/workspace/host-volume/.persist/.zsh_history"
+        - name: SYNCTHING_ENABLE
+          value: "true"
+        - name: STHOMEDIR
+          value: "/workspace/host-volume/.persist/.syncthing"
+        - name: SYNCTHING_SYNC_DIR
+          value: "/workspace/host-volume/syncthing"
         ports:
         - containerPort: 3389
           name: rdp

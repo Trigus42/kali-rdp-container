@@ -1,18 +1,22 @@
 services:
   kali-rdp:
     build: ./kali-rdp-image/
+    # image: ghcr.io/trigus42/kali-rdp-container:latest
     container_name: kali-rdp
     environment:
       - SSHD_ENABLE=true
       - DIND_ENABLE=true
-      - MSF_ENABLE=false
+      - MSF_ENABLE=true
       - GOCRYPTFS_PASSWORD=${GOCRYPTFS_PASSWORD}
-      - HISTFILE=/workspace/host-encrypted/.zsh_history
+      - SYNCTHING_ENABLE=true
+      - STHOMEDIR=/workspace/host-encrypted/.persist/.syncthing
+      - SYNCTHING_SYNC_DIR=/workspace/host-encrypted/syncthing
+      - HISTFILE=/workspace/host-encrypted/.persist/.zsh_history
     ports:
       - "127.0.0.1:3389:3389"
       - "127.0.0.1:2222:22"
     volumes:
-      - ../:/workspace/host-unencrypted/:rw
+      - ../kali-unencrypted-mount:/workspace/host-unencrypted/:rw
     sysctls:
       net.ipv6.conf.all.disable_ipv6: 0
     # Networking (VPN, Proxy, etc.)
