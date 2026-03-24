@@ -7,11 +7,11 @@ services:
       - SSHD_ENABLE=true
       - DIND_ENABLE=true
       - MSF_ENABLE=true
-      - GOCRYPTFS_PASSWORD=${GOCRYPTFS_PASSWORD}
-      - SYNCTHING_ENABLE=true
-      - STHOMEDIR=/workspace/host-encrypted/.persist/.syncthing
-      - SYNCTHING_SYNC_DIR=/workspace/host-encrypted/syncthing
-      - HISTFILE=/workspace/host-encrypted/.persist/.zsh_history
+      # - GOCRYPTFS_PASSWORD=${GOCRYPTFS_PASSWORD}
+      # - SYNCTHING_ENABLE=true
+      # - STHOMEDIR=/workspace/host-encrypted/.persist/.syncthing
+      # - SYNCTHING_SYNC_DIR=/workspace/host-encrypted/syncthing
+      # - HISTFILE=/workspace/host-encrypted/.persist/.zsh_history
     ports:
       - "127.0.0.1:3389:3389"
       - "127.0.0.1:2222:22"
