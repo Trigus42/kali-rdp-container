@@ -106,9 +106,9 @@ RUN \
     chown -R kali:kali /home/kali/.zshrc && \
     chown -R root:root /root/.zshrc && \
     # SSH setup
-    sed -i 's/#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/g' /etc/ssh/sshd_config \
-    && echo 'AuthorizedKeysFile ~/.ssh/authorized_keys' >> /etc/ssh/sshd_config \
-    && mkdir -p /run/sshd
+    mkdir -p /run/sshd
+
+COPY sshd_config /etc/ssh/sshd_config
 
 # Services
 COPY startup /startup
