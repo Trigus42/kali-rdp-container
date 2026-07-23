@@ -4,10 +4,12 @@ ENV LANG=en_US.UTF-8
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Basic Kali Linux setup
+# inetsim post-install script fails in containers, so we allow the error and fix up
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         kali-defaults \
         kali-linux-headless \
+    || (apt-get install -y --no-install-recommends --fix-broken && true) \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
