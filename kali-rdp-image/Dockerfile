@@ -96,7 +96,7 @@ RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
 RUN curl -fsSL https://mise.run | sh
 
 # uv tools
-COPY --from=ghcr.io/astral-sh/uv:0.10.10 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 RUN uv tool install --no-cache \
     git+https://github.com/Trigus42/jwt_tool.git
 
