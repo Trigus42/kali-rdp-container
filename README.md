@@ -57,6 +57,58 @@ The host directory `../kali-unencrypted-mount` (relative to the compose file) is
 
 The example compose file grants `NET_ADMIN`, access to `/dev/net/tun` (for VPN/proxy use), and `privileged: true` (required for things like NFS mounting and Docker-in-Docker with fuse-overlayfs).
 
+## VPN (Gluetun — WireGuard, kill switch)
+
+VPN is handled by a [Gluetun](https://github.com/qdm12/gluetun) sidecar container that owns the network namespace. Kali shares it via `network_mode: service:gluetun`, so all traffic is forced through the tunnel — if the tunnel drops, Gluetun's kill switch blocks everything and there are no leaks.
+
+### How it works
+
+- Gluetun holds `NET_ADMIN` and `/dev/net/tun`; Kali has no independent network stack.
+- RDP/SSH ports are published on the Gluetun container, so they remain accessible on the host regardless of VPN state.
+- DNS goes through Gluetun's built-in DoT resolver (Quad9 by default) — no plain UDP DNS queries leave the host.
+- IPv6 is enabled end-to-end (`VPN_IPV6=on`); disable if your provider doesn't support it.
+
+### Setup
+
+1. Create the config directory next to `docker-compose.yaml`:
+
+   ```bash
+   mkdir -p vpn-configs
+   ```
+
+2. Place your WireGuard config file at `vpn-configs/wg0.conf`. Standard `wg-quick` format is expected:
+
+   ```ini
+   [Interface]
+   PrivateKey = <your-private-key>
+   Address = 10.x.x.x/32
+   DNS = 10.x.x.1
+
+   [Peer]
+   PublicKey = <server-public-key>
+   Endpoint = vpn.example.com:51820
+   AllowedIPs = 0.0.0.0/0,::/0
+   ```
+
+   > **Note:** The `DNS =` line in the config is ignored by Gluetun — DNS is managed by its own DoT subsystem. Set `DNS_UPSTREAM_RESOLVERS` in the compose file to change the resolver.
+
+3. Start the stack:
+
+   ```bash
+   docker compose up -d
+   ```
+
+   Gluetun starts first; Kali waits for it via `depends_on`.
+
+### Environment Variables (on the `gluetun` service)
+
+| Variable | Default | Description |
+|---|---|---|
+| `VPN_IPV6` | `on` | Enable IPv6 through the tunnel. Set to `off` if unsupported by your provider. |
+| `FIREWALL_OUTBOUND_SUBNETS` | *(empty)* | Comma-separated CIDRs allowed outside the tunnel (e.g. `192.168.1.0/24` for LAN). |
+| `DNS_UPSTREAM_RESOLVER_TYPE` | `dot` | DNS resolver type. Keep as `dot` for encrypted DNS. |
+| `DNS_UPSTREAM_RESOLVERS` | `quad9` | DoT provider. Options: `quad9`, `cloudflare`, `google`. |
+
 ## gocryptfs (Encrypted Volume)
 
 gocryptfs provides a transparent encryption layer on top of the host-mounted directory. Files written to the decrypted mount are automatically encrypted on the host.

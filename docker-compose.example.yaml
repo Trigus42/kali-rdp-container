@@ -1,8 +1,53 @@
 services:
+  # Gluetun owns the network namespace. All Kali traffic is routed through
+  # it — the kill switch and DNS leak protection are enforced by Gluetun,
+  # not by the Kali container itself. RDP/SSH ports are published here so
+  # they remain accessible on the host even when the VPN is down.
+  gluetun:
+    image: ghcr.io/qdm12/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    volumes:
+      # Place your wg0.conf next to this compose file in vpn-configs/.
+      # Fields in the file override env vars — keys, endpoint, addresses
+      # and the DNS server are all read from it automatically.
+      - ./vpn-configs:/gluetun/wireguard:ro
+    environment:
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      # IPv6 — set to on if your VPN provider supports it.
+      - VPN_IPV6=on
+      # Kill switch: no outbound subnets outside the tunnel are allowed.
+      # Add comma-separated CIDRs here if you need local LAN access
+      # (e.g. FIREWALL_OUTBOUND_SUBNETS=192.168.1.0/24).
+      - FIREWALL_OUTBOUND_SUBNETS=
+      # DNS: all queries go through Gluetun's built-in DoT resolver —
+      # encrypted end-to-end, no plain UDP DNS leaks possible.
+      # Quad9 is used as the upstream (privacy-focused, no-log).
+      # The DNS = line in wg0.conf is NOT used; Gluetun manages DNS
+      # independently of the WireGuard config.
+      - DNS_UPSTREAM_RESOLVER_TYPE=dot
+      - DNS_UPSTREAM_RESOLVERS=quad9
+    ports:
+      - "127.0.0.1:3389:3389"
+      - "127.0.0.1:2222:22"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+    restart: unless-stopped
+
   kali-rdp:
     build: ./kali-rdp-image/
     # image: ghcr.io/trigus42/kali-rdp-container:latest
     container_name: kali-rdp
+    # Share Gluetun's network namespace — Kali has no independent network
+    # stack; all traffic goes through Gluetun's kill-switched interface.
+    network_mode: service:gluetun
+    depends_on:
+      - gluetun
     environment:
       - SSHD_ENABLE=true
       - DIND_ENABLE=true
@@ -12,18 +57,9 @@ services:
       # - STHOMEDIR=/workspace/host-encrypted/.persist/.syncthing
       # - SYNCTHING_SYNC_DIR=/workspace/host-encrypted/syncthing
       # - HISTFILE=/workspace/host-encrypted/.persist/.zsh_history
-    ports:
-      - "127.0.0.1:3389:3389"
-      - "127.0.0.1:2222:22"
     volumes:
       - ../kali-unencrypted-mount:/workspace/host-unencrypted/:rw
       # - ./authorized_keys:/etc/ssh/authorized_keys/authorized_keys:ro
-    sysctls:
-      net.ipv6.conf.all.disable_ipv6: 0
-    # Networking (VPN, Proxy, etc.)
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun
+    # ports are declared on gluetun, not here
     # Many things (like NFS mounting) require privileged mode
     privileged: true
