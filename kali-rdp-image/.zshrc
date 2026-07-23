@@ -8,12 +8,11 @@ export LC_CTYPE="C.UTF-8"
 # ==============================================================================
 # 2. HISTORY CONFIGURATION (Custom Multi-Terminal)
 # ==============================================================================
-# Source container env vars (e.g. HISTFILE) written by startup/env.sh.
-# Done here so it runs after the system /etc/zsh/zshrc which may reset values.
-[ -f /etc/kali-rdp-env ] && source /etc/kali-rdp-env
 
-if [ -z "$HISTFILE" ]; then
+if [ -z "$ZSH_HISTFILE" ]; then
     HISTFILE=~/.zsh_history
+else
+    HISTFILE="$ZSH_HISTFILE"
 fi
 HISTSIZE=100000
 SAVEHIST=100000
@@ -22,9 +21,9 @@ setopt SHARE_HISTORY
 setopt EXTENDED_HISTORY
 setopt HIST_IGNORE_SPACE
 setopt HIST_REDUCE_BLANKS
-setopt hist_expire_dups_first 
-setopt hist_ignore_dups       
-setopt hist_verify            
+setopt hist_expire_dups_first
+setopt hist_ignore_dups
+setopt hist_verify
 
 # Force zsh to show the complete history
 alias history="history 0"
@@ -60,22 +59,36 @@ bindkey '^[[F' end-of-line                        # end
 bindkey '^[[Z' undo                               # shift + tab undo last action
 
 # ==============================================================================
-# 5. COMPLETION FEATURES (Kali Defaults)
+# 5. MISE (Tool Version Manager) - must be before compinit so tools are on PATH
+# ==============================================================================
+eval "$(mise activate zsh)"
+
+# ==============================================================================
+# 6. COMPLETION FEATURES
 # ==============================================================================
 autoload -Uz compinit
 compinit -d ~/.cache/zcompdump
+
+# Auto-discover completions: when pressing TAB on any command for the first
+# time, try running `<cmd> completion zsh` to load its completions on the fly.
+_try_load_completion() {
+    local cmd=$words[1]
+    local out=$($cmd completion zsh 2>/dev/null)
+    if [[ $out == *compdef* ]]; then
+        source <(echo $out)
+        ${_comps[$cmd]} "$@"
+    else
+        _default "$@"
+    fi
+}
+_comps[-default-]=_try_load_completion
 zstyle ':completion:*:*:*:*:*' menu select
-zstyle ':completion:*' auto-description 'specify: %d'
 zstyle ':completion:*' completer _expand _complete
-zstyle ':completion:*' format 'Completing %d'
-zstyle ':completion:*' group-name ''
 zstyle ':completion:*' list-colors ''
-zstyle ':completion:*' list-prompt %SAt %p: Hit TAB for more, or the character to insert%s
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 zstyle ':completion:*' rehash true
-zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p%s
 zstyle ':completion:*' use-compctl false
-zstyle ':completion:*' verbose true
+zstyle ':completion:*' verbose false
 zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 
 # ==============================================================================

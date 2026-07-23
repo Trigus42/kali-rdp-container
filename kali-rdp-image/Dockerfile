@@ -74,7 +74,6 @@ Signed-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.source
         # Additonal tools
         git \
         git-lfs \
-        starship \
         zsh-autosuggestions \
         zsh-syntax-highlighting \
         nano \
@@ -89,6 +88,12 @@ Signed-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.source
     # Clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# starship
+RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
+
+# mise 
+RUN curl -fsSL https://mise.run | sh
 
 # uv tools
 COPY --from=ghcr.io/astral-sh/uv:0.10.10 /uv /uvx /bin/
