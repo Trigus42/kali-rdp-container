@@ -93,7 +93,7 @@ Signed-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.source
 RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
 
 # mise 
-RUN curl -fsSL https://mise.run | sh
+RUN curl -fsSL https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh
 
 # uv tools
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -121,18 +121,26 @@ COPY sshd_config /etc/ssh/sshd_config
 COPY startup /startup
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Fixes
+# bwrap passthrough shim: glycin sandboxes SVG loading via bwrap with a
+# seccomp filter that blocks syscalls inside a container, causing GTK to
+# SIGABRT. The shim execs the loader directly without sandboxing.
+# dpkg-divert keeps this working across bubblewrap package upgrades.
+COPY fixes/bwrap-shim /usr/local/bin/bwrap-shim
+
+# XFCE window-manager defaults with compositing disabled (lower RDP latency).
+# System-wide xfconf default; freshly created user homes inherit it on login.
+COPY fixes/xfwm4.xml /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
+
 RUN \
     # Disable screen locking and power management
     rm -f /etc/xdg/autostart/xfce4-screensaver.desktop && \
     rm -f /etc/xdg/autostart/light-locker.desktop && \
     rm -f /etc/xdg/autostart/xfce4-power-manager.desktop && \
-    # Force Xvnc to be the default XRDP session to fix Kali scrolling bug
-    sed -i '/^\[Xorg\]/i [Xvnc-Default]\nname=Xvnc-Default\nlib=libvnc.so\nusername=ask\npassword=ask\nip=127.0.0.1\nport=-1\n' /etc/xrdp/xrdp.ini && \
-    # WORKAROUND: Allow bwrap to use SUID to fix XFCE/XRDP session crashes.
-    # WHY: Containers block the unprivileged user namespaces that bwrap needs 
-    # to sandbox SVG icon rendering. SUID allows it to bypass this restriction.
-    chmod u+s /usr/bin/bwrap
+    # Give the software H.264 encoder more threads for lower latency at high resolution.
+    sed -i 's/^threads = 1/threads = 2/' /etc/xrdp/gfx.toml && \
+    # Install bwrap shim (see comment above COPY).
+    dpkg-divert --add --rename --divert /usr/bin/bwrap.real /usr/bin/bwrap && \
+    install -m 0755 /usr/local/bin/bwrap-shim /usr/bin/bwrap
 
 EXPOSE 22/tcp
 EXPOSE 3389/tcp

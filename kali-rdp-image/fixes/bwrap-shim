@@ -1,0 +1,127 @@
+#!/usr/bin/python3
+# bwrap passthrough shim.
+#
+# glycin (the gdk-pixbuf SVG loader) sandboxes its loader process via bwrap
+# with a seccomp filter. Inside a container that seccomp filter blocks syscalls
+# the loader needs, causing it to exit with status 1 and GTK to SIGABRT.
+#
+# This shim parses the bwrap command line, honours the environment/chdir
+# related options, and then execs the target COMMAND *without* any namespace
+# or mount sandboxing -- exactly what glycin does in its "no sandbox" fallback
+# mode, which is known to work here. Inherited file descriptors (e.g. glycin's
+# --dbus-fd) are preserved across exec.
+#
+# The original binary is kept (via dpkg-divert) at /usr/bin/bwrap.real for
+# anything that wants to attempt the real sandbox.
+
+import os
+import sys
+
+ZERO = {
+    "--help", "--version", "--level-prefix",
+    "--unshare-all", "--share-net", "--unshare-user", "--unshare-user-try",
+    "--unshare-ipc", "--unshare-pid", "--unshare-net", "--unshare-uts",
+    "--unshare-cgroup", "--unshare-cgroup-try",
+    "--disable-userns", "--assert-userns-disabled",
+    "--clearenv", "--new-session", "--die-with-parent", "--as-pid-1",
+}
+ONE = {
+    "--args", "--userns", "--userns2", "--pidns", "--uid", "--gid",
+    "--hostname", "--lock-file", "--sync-fd", "--remount-ro", "--overlay-src",
+    "--tmp-overlay", "--ro-overlay", "--exec-label", "--file-label", "--proc",
+    "--dev", "--tmpfs", "--mqueue", "--dir", "--seccomp", "--add-seccomp-fd",
+    "--block-fd", "--userns-block-fd", "--info-fd", "--json-status-fd",
+    "--cap-add", "--cap-drop", "--perms", "--size",
+}
+TWO = {
+    "--setenv", "--bind", "--bind-try", "--dev-bind", "--dev-bind-try",
+    "--ro-bind", "--ro-bind-try", "--bind-fd", "--ro-bind-fd", "--file",
+    "--bind-data", "--ro-bind-data", "--symlink", "--chmod",
+}
+THREE = {"--overlay"}
+
+
+def parse(argv, env):
+    """Consume bwrap options from argv, applying env/chdir side effects.
+    Returns (command_list, argv0_override, chdir_dir)."""
+    argv0 = None
+    chdir = None
+    i = 0
+    n = len(argv)
+    while i < n:
+        a = argv[i]
+        if a == "--":
+            i += 1
+            break
+        if not a.startswith("--"):
+            break
+        if a == "--clearenv":
+            env.clear()
+            i += 1
+        elif a == "--setenv":
+            env[argv[i + 1]] = argv[i + 2]
+            i += 3
+        elif a == "--unsetenv":
+            env.pop(argv[i + 1], None)
+            i += 2
+        elif a == "--chdir":
+            chdir = argv[i + 1]
+            i += 2
+        elif a == "--argv0":
+            argv0 = argv[i + 1]
+            i += 2
+        elif a == "--args":
+            fd = int(argv[i + 1])
+            with os.fdopen(fd, "rb") as f:
+                extra = f.read().split(b"\0")
+            extra = [x.decode() for x in extra if x != b""]
+            # splice remaining current args after the injected ones
+            argv = extra + argv[i + 2:]
+            i = 0
+            n = len(argv)
+        elif a in ZERO:
+            i += 1
+        elif a in ONE:
+            i += 2
+        elif a in TWO:
+            i += 3
+        elif a in THREE:
+            i += 4
+        else:
+            # Unknown option: assume it takes no argument.
+            i += 1
+    return argv[i:], argv0, chdir
+
+
+def main():
+    argv = sys.argv[1:]
+    env = dict(os.environ)
+    try:
+        cmd, argv0, chdir = parse(argv, env)
+    except Exception:
+        # If anything goes wrong parsing, fall back to the real bwrap.
+        os.execv("/usr/bin/bwrap.real", ["/usr/bin/bwrap.real"] + sys.argv[1:])
+        return
+
+    if not cmd:
+        os._exit(0)
+
+    if chdir:
+        try:
+            os.chdir(chdir)
+        except OSError:
+            pass
+
+    exec_argv = list(cmd)
+    if argv0 is not None:
+        exec_argv[0] = argv0
+
+    try:
+        os.execvpe(cmd[0], exec_argv, env)
+    except OSError as e:
+        sys.stderr.write("bwrap-shim: failed to exec %r: %s\n" % (cmd[0], e))
+        os._exit(127)
+
+
+if __name__ == "__main__":
+    main()
