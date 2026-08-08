@@ -1,0 +1,119 @@
+FROM kalilinux/kali-rolling
+
+ENV LANG=en_US.UTF-8
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Basic Kali Linux setup
+# inetsim post-install script fails in containers, so we allow the error and fix up
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        kali-defaults \
+        kali-linux-headless \
+    || (apt-get install -y --no-install-recommends --fix-broken && true) \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Desktop environment and remote access setup
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        dbus-x11 \
+        locales \
+        sudo \
+        x11-xserver-utils \
+        xfce4 \
+        xfce4-goodies \
+        fonts-dejavu \
+        xorgxrdp \
+        tigervnc-standalone-server \
+        xrdp \
+        iproute2 \
+        dnsutils \
+        openssh-server \
+        supervisor \
+        kali-desktop-xfce \
+        kali-themes \
+        kali-wallpapers-2025 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Tools and services setup
+ARG DEBIAN_CODENAME=trixie
+RUN \
+    apt-get update && \
+    # Docker repository setup
+    apt-get install -y ca-certificates curl && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "Types: deb\n\
+URIs: https://download.docker.com/linux/debian\n\
+Suites: ${DEBIAN_CODENAME}\n\
+Components: stable\n\
+Signed-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.sources && \
+    # VS Code repository setup
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg && \
+    echo "deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list && \
+    apt-get update && \
+    # Install
+    apt-get install -y --no-install-recommends \
+        # Docker
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-compose-plugin \
+        fuse-overlayfs \
+        # gocryptfs for encrypted host volume
+        gocryptfs \
+        fuse3 \
+        # Syncthing
+        syncthing \
+        # Additional tools
+        git \
+        git-lfs \
+        zsh-autosuggestions \
+        zsh-syntax-highlighting \
+        nano \
+        # Pentesting tools
+        sliver \
+        ffuf \
+        burpsuite \
+        bloodhound \
+        crackmapexec \
+        evil-winrm \
+        hashcat && \
+    # Clean up
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# starship
+RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
+
+# mise
+RUN curl -fsSL https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh
+
+# uv tools
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN uv tool install --no-cache \
+    git+https://github.com/Trigus42/jwt_tool.git
+
+COPY rootfs/ /
+COPY home/.zshrc /home/kali/.zshrc
+COPY home/.zshrc /root/.zshrc
+COPY home/.config/starship.toml /home/kali/.config/starship.toml
+COPY home/.config/starship.toml /root/.config/starship.toml
+RUN chmod +x /opt/install-autopsy.sh /startup/*.sh
+RUN \
+    # User setup
+    useradd -m -s /bin/zsh -G sudo kali && \
+    echo 'kali:kali' | chpasswd && \
+    echo 'kali ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers && \
+    chown -R kali:kali /home/kali/ && \
+    chsh -s /bin/zsh kali && \
+    chsh -s /bin/zsh root && \
+    # SSH setup
+    mkdir -p /run/sshd && \
+    # Disable screen locking and power management
+    rm -f /etc/xdg/autostart/xfce4-screensaver.desktop && \
+    rm -f /etc/xdg/autostart/light-locker.desktop && \
+    rm -f /etc/xdg/autostart/xfce4-power-manager.desktop
