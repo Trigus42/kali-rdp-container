@@ -86,6 +86,20 @@ Signed-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.source
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Autopsy dependencies (installed at image build time; Autopsy itself goes in a volume)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        testdisk \
+        libsleuthkit-java \
+        dos2unix \
+        unzip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    # Register the JNI lib so the JVM finds libtsk_jni
+    find /usr/lib -name "libtsk_jni.so" | head -1 | xargs dirname \
+        | tee /etc/ld.so.conf.d/libtsk-jni.conf && \
+    ldconfig
+
 # starship
 RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
 
