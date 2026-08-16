@@ -1,6 +1,7 @@
 # Kali Docker Image
 
-Just for my personal use, but feel free to use it if you want.
+> [!IMPORTANT]
+> **No Support** — This project is built and maintained strictly for my personal work. It is shared in case it is useful to others, but I do not offer technical support, troubleshooting, or feature maintenance.
 
 It's not optimized for size, but for ease of use. It is based on the official Kali Linux image, and it includes some additional tools that I use frequently.
 
